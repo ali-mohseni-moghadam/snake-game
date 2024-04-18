@@ -5,7 +5,6 @@ import {
   MeshBuilder,
   StandardMaterial,
   Vector2,
-  Vector3,
 } from "@babylonjs/core";
 import Game from "./Game";
 import Grounds from "./Ground";
