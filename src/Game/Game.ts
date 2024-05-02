@@ -1,10 +1,17 @@
-import { Engine, Observable, Scene } from "@babylonjs/core";
+import {
+  Engine,
+  HavokPlugin,
+  Observable,
+  Scene,
+  Vector3,
+} from "@babylonjs/core";
 import Debugger from "./Debugger";
 import Environment from "./Environment";
 import Camera from "./Camera";
 import Grounds from "./Ground";
 import { Snake } from "./Snake";
 // import useStore from "../store/index.store";
+import HavokPhysics from "@babylonjs/havok";
 
 export default class Game {
   private static instance: Game | undefined;
@@ -43,6 +50,8 @@ export default class Game {
 
     this.scene = new Scene(this.engine);
 
+    await this.initPhysics();
+
     window.addEventListener("resize", this.onResize.bind(this));
 
     this.camera = new Camera();
@@ -71,6 +80,13 @@ export default class Game {
   private onResize() {
     this.engine.resize();
     this.resizeObservable.notifyObservers(undefined);
+  }
+
+  async initPhysics() {
+    const hk = await HavokPhysics();
+    const gravityVector = new Vector3(0, -5, 0);
+    const physicsPlugin = new HavokPlugin(true, hk);
+    this.scene.enablePhysics(gravityVector, physicsPlugin);
   }
 
   cleanUp() {

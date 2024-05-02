@@ -3,6 +3,9 @@ import {
   KeyboardInfo,
   Mesh,
   MeshBuilder,
+  PhysicsAggregate,
+  PhysicsMotionType,
+  PhysicsShapeType,
   StandardMaterial,
   Vector2,
 } from "@babylonjs/core";
@@ -19,6 +22,8 @@ export class Snake {
 
   ground: Grounds;
 
+  boxAggregate!: PhysicsAggregate;
+
   constructor() {
     const scene = Game.getInstance().scene;
 
@@ -27,8 +32,6 @@ export class Snake {
     this.ground = Game.getInstance().ground;
 
     // this.createSnakeBody();
-
-    this.gameOver();
 
     scene.onKeyboardObservable.add(this.onKeyboard.bind(this));
     scene.onBeforeRenderObservable.add(this.update.bind(this));
@@ -62,6 +65,16 @@ export class Snake {
       ? (material.diffuseColor = color)
       : (material.diffuseColor = Color3.Black());
     box.material = material;
+
+    this.boxAggregate = new PhysicsAggregate(
+      box,
+      PhysicsShapeType.BOX,
+      undefined
+    );
+    this.boxAggregate.body.setMassProperties({ mass: 1 });
+    this.boxAggregate.body.setMotionType(PhysicsMotionType.ANIMATED);
+    this.boxAggregate.body.disablePreStep = false;
+
     return box;
   }
 
@@ -73,14 +86,8 @@ export class Snake {
   //     this.body.push(body);
   //   });
   // }
-  gameOver() {
-    if (this.head.position.x < -1.6) {
-      console.log("game over");
-    }
-  }
 
   update() {
-    // console.log(this.head.position.x);
     const engine = Game.getInstance().engine;
     const delta = engine.getDeltaTime();
     this.timePassed += delta;
@@ -95,8 +102,5 @@ export class Snake {
 
       this.timePassed -= 1000;
     }
-
-    // const maxX: number = 1.5;
-    // const minX: number = -1.5;
   }
 }
