@@ -15,6 +15,7 @@ import HavokPhysics from "@babylonjs/havok";
 
 export default class Game {
   private static instance: Game | undefined;
+  physicsPlugin!: HavokPlugin;
 
   static getInstance() {
     if (!this.instance) {
@@ -85,8 +86,8 @@ export default class Game {
   async initPhysics() {
     const hk = await HavokPhysics();
     const gravityVector = new Vector3(0, -5, 0);
-    const physicsPlugin = new HavokPlugin(true, hk);
-    this.scene.enablePhysics(gravityVector, physicsPlugin);
+    this.physicsPlugin = new HavokPlugin(true, hk);
+    this.scene.enablePhysics(gravityVector, this.physicsPlugin);
   }
 
   cleanUp() {
