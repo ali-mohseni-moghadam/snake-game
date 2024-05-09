@@ -36,6 +36,7 @@ export default class Game {
   cleanUpObservable = new Observable();
   resizeObservable = new Observable();
   isInitialized = false;
+  snake!: Snake;
   ground!: Grounds;
 
   async init(canvas: HTMLCanvasElement) {
@@ -59,7 +60,7 @@ export default class Game {
 
     new Environment();
     this.ground = new Grounds();
-    new Snake();
+    this.snake = new Snake();
 
     if (process.env.NODE_ENV === "development") {
       const debugLayer = new Debugger();

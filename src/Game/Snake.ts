@@ -19,7 +19,8 @@ import Grounds from "./Ground";
 export class Snake {
   head!: Mesh;
   body: Mesh[] = [];
-  range: number[] = [-0.1, -0.2, -0.3, -0.4, -0.5];
+  cloneBody: Vector3 = Vector3.Zero();
+
   timePassed: number = 0;
 
   direction = new Vector2(1, 0);
@@ -33,15 +34,16 @@ export class Snake {
   appleStorage: Mesh | null = null;
 
   scene: Scene;
-  observer: any;
   hk!: HavokPlugin;
-
-  collidedWithApple: boolean = false;
 
   lastPosition: Vector3 = Vector3.Zero();
 
-  groundWidth: number = 3.1;
-  groundHeight: number = 2.1;
+  groundWidth: number = 2.5;
+  groundHeight: number = 2.5;
+
+  inputs: Vector2[] = [];
+
+  score: number = 0;
 
   constructor() {
     this.hk = Game.getInstance().physicsPlugin;
@@ -59,24 +61,26 @@ export class Snake {
   }
 
   onKeyboard(event: KeyboardInfo) {
-    this.direction.x = 0;
-    this.direction.y = 0;
     switch (event.event.key) {
       case "w":
-        this.direction.y = -1;
-
-        break;
-      case "d":
-        this.direction.x = -1;
-
-        break;
-      case "a":
-        this.direction.x = 1;
-
+        if (this.direction.y !== 1) {
+          this.direction.set(0, -1);
+        }
         break;
       case "s":
-        this.direction.y = 1;
-
+        if (this.direction.y !== -1) {
+          this.direction.set(0, 1);
+        }
+        break;
+      case "d":
+        if (this.direction.x !== 1) {
+          this.direction.set(-1, 0);
+        }
+        break;
+      case "a":
+        if (this.direction.x !== -1) {
+          this.direction.set(1, 0);
+        }
         break;
     }
   }
@@ -111,13 +115,72 @@ export class Snake {
             event.collidedAgainst.dispose();
             this.createApple();
             this.createSnakeBody();
+            this.score++;
+            // console.log(this.score);
+          } else if (
+            event.collider.transformNode.name === "snake" &&
+            event.collidedAgainst.transformNode.name === "snakeBody"
+          ) {
+            console.log("collided");
+            this.gameOver();
           }
         }
-        console.log(event);
       }
     );
 
     return box;
+  }
+
+  createSnakeBody() {
+    const body = MeshBuilder.CreateBox("snakeBody", { size: 0.09 });
+    const material = new StandardMaterial("box");
+    material.diffuseColor = new Color3(0, 0, 0);
+    body.material = material;
+
+    body.position.copyFrom(this.lastPosition);
+
+    const snakeBodyAggregate = new PhysicsAggregate(body, PhysicsShapeType.BOX);
+    snakeBodyAggregate.body.setMassProperties({ mass: 1 });
+    snakeBodyAggregate.body.setMotionType(PhysicsMotionType.STATIC);
+    snakeBodyAggregate.shape.isTrigger = true;
+    snakeBodyAggregate.body.disablePreStep = false;
+
+    this.body.push(body);
+  }
+
+  getRandomNumbner() {
+    const occupiedBodyPos = this.cloneBody;
+    const occupiedHeadPos = this.head.position;
+
+    let movementRangeX = this.groundWidth / 2;
+    let movementRangeZ = this.groundHeight / 2;
+    let random = Vector3.Zero();
+
+    let finalPosition = false;
+
+    while (true) {
+      let randomMovementX = +(
+        Math.random() * movementRangeX -
+        movementRangeX
+      ).toFixed(1);
+      let randomMovementZ = +(
+        Math.random() * movementRangeZ -
+        movementRangeZ
+      ).toFixed(1);
+
+      random.set(randomMovementX, 0, randomMovementZ);
+
+      if (
+        (occupiedBodyPos.x === random.x && occupiedBodyPos.z === random.z) ||
+        (occupiedHeadPos.x === random.x && occupiedHeadPos.z === random.z)
+      ) {
+        finalPosition = true;
+      }
+
+      if (!finalPosition) {
+        return random;
+      }
+    }
   }
 
   createApple() {
@@ -129,41 +192,20 @@ export class Snake {
     const material = new StandardMaterial("box");
     material.diffuseColor = new Color3(0, 1, 0);
     apple.material = material;
-    apple.material.alpha = 0.7;
+    // apple.material.alpha = 0.7;
 
-    let movementRangeX = 1.5;
-    let movementRangeY = 1.1;
-
-    let randomMovementX = +(
-      Math.random() * movementRangeX -
-      movementRangeX / 2
-    ).toFixed(1);
-    let randomMovementY = +(
-      Math.random() * movementRangeY -
-      movementRangeY / 2
-    ).toFixed(1);
-
-    apple.position = new Vector3(randomMovementX, 0, randomMovementY);
+    // random position
+    const randomPosition = this.getRandomNumbner();
+    apple.position.set(randomPosition.x, 0, randomPosition.z);
 
     const appleAggregate = new PhysicsAggregate(apple, PhysicsShapeType.BOX);
-
     appleAggregate.body.disablePreStep = false;
-
     appleAggregate.body.setMotionType(PhysicsMotionType.STATIC);
     appleAggregate.shape.isTrigger = true;
 
     this.appleStorage = apple;
 
     return apple;
-  }
-
-  createSnakeBody() {
-    const body = MeshBuilder.CreateBox("snakeBody", { size: 0.09 });
-    const material = new StandardMaterial("box");
-    material.diffuseColor = new Color3(0, 0, 0);
-    body.material = material;
-    body.position.copyFrom(this.lastPosition);
-    this.body.push(body);
   }
 
   gameOver() {
@@ -175,11 +217,13 @@ export class Snake {
     this.head.position = Vector3.Zero();
     this.direction = new Vector2(1, 0);
 
-    for (const i of this.body) {
-      i.dispose();
-    }
+    this.body.forEach((item) => {
+      item.dispose();
+    });
+
     this.body = [];
     this.timePassed = 0;
+    this.score = 0;
     this.createApple();
   }
 
@@ -188,7 +232,7 @@ export class Snake {
     const delta = engine.getDeltaTime();
     this.timePassed += delta;
 
-    if (this.timePassed >= 500) {
+    if (this.timePassed >= 300) {
       this.lastPosition = this.head.position.clone();
 
       this.head.position.x += this.direction.x * 0.1;
@@ -197,6 +241,7 @@ export class Snake {
       for (let i = 0; i < this.body.length; i++) {
         const oldBodyPos = this.body[i].position.clone();
         this.body[i].position.copyFrom(this.lastPosition);
+        this.cloneBody.copyFrom(this.body[i].position);
         this.lastPosition.copyFrom(oldBodyPos);
       }
 
@@ -209,7 +254,7 @@ export class Snake {
         this.gameOver();
         return;
       }
-      this.timePassed -= 500;
+      this.timePassed -= 300;
     }
   }
 }

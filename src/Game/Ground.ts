@@ -10,8 +10,8 @@ export default class Grounds {
 
   constructor() {
     this.ground = CreateGround("base_ground", {
-      width: 3.1,
-      height: 2.1,
+      width: 2.5,
+      height: 2.5,
     });
 
     // const groundMat = new StandardMaterial("groundMat");
